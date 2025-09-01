@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<title>Калькулятор ювелірних виробів</title>
+<style>
+body { font-family: Arial, sans-serif; background:#f2f2f2; padding:20px; margin:0; }
+.container { max-width:500px; margin:auto; background:white; padding:20px; border-radius:12px; box-shadow:0 0 10px rgba(0,0,0,0.2); }
+h2 { text-align:center; margin-bottom:20px; font-size:1.8em; }
+label { font-weight:bold; display:block; margin-top:10px; font-size:1em; }
+input, select, button { width:100%; padding:10px; margin-top:5px; border-radius:6px; border:1px solid #ccc; font-size:1em; box-sizing:border-box; }
+button { background:#8bc34a; color:white; border:none; cursor:pointer; font-weight:bold; }
+button:hover { background:#7abf42; }
+.result { margin-top:20px; padding:15px; background:#e9ffe9; border:1px solid #8bc34a; border-radius:8px; font-weight:bold; text-align:center; font-size:1em; word-wrap: break-word;}
+.switch { display:flex; align-items:center; margin-top:10px;}
+.switch input { margin-right:10px; }
+@media (max-width:600px) {
+  .container { padding:15px; }
+  h2 { font-size:1.5em; }
+  input, select, button { font-size:1em; padding:8px; }
+  .result { font-size:0.95em; padding:12px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+<h2>Калькулятор ювелірних виробів</h2>
+
+<label for="weave">Тип плетіння:</label>
+<select id="weave">
+<option value="Бісмарк">Бісмарк</option>
+<option value="Рамзес">Рамзес</option>
+<option value="Венеція">Венеція</option>
+<option value="Роза">Роза</option>
+<option value="Кардинал">Кардинал</option>
+<option value="Козацький">Козацький</option>
+<option value="Якірне">Якірне</option>
+</select>
+
+<label for="wire">Товщина проволоки (мм):</label>
+<input type="number" id="wire" step="0.01">
+
+<label for="bar">Товщина ригелю (мм):</label>
+<input type="number" id="bar" step="0.01">
+
+<label for="length">Довжина (см):</label>
+<input type="number" id="length" step="0.1">
+
+<label for="weight">Вага (г):</label>
+<input type="number" id="weight" step="0.01">
+
+<div class="switch">
+<input type="checkbox" id="loss">
+<label for="loss">Додати 8% угару</label>
+</div>
+
+<button id="calculate">Розрахувати</button>
+
+<div id="output" class="result">Результат з’явиться тут</div>
+</div>
+
+<script>
+const defaults = {
+"Бісмарк": {wire:1.3, bar:3.5, length:25, weight:27.4},
+"Рамзес": {wire:2.0, bar:6.0, length:22, weight:108},
+"Венеція": {wire:0.65, bar:3.0, length:52, weight:26.7},
+"Роза": {wire:0.4, bar:2.0, length:50, weight:10.7},
+"Кардинал": {wire:1.3, bar:4.9, length:22, weight:49.1},
+"Козацький": {wire:0.7, bar:2.0, length:50, weight:19.7},
+"Якірне": {wire:1.7, bar:4.0, length:60, weight:48.5}
+};
+
+const wireInput = document.getElementById("wire");
+const barInput = document.getElementById("bar");
+const lengthInput = document.getElementById("length");
+const weightInput = document.getElementById("weight");
+const weaveSelect = document.getElementById("weave");
+const lossCheckbox = document.getElementById("loss");
+const outputDiv = document.getElementById("output");
+const calculateBtn = document.getElementById("calculate");
+
+function sanitize(value){ return (value && value>0) ? value : NaN; }
+
+function setDefaults(){
+  const def = defaults[weaveSelect.value];
+  wireInput.value = def.wire;
+  barInput.value = def.bar;
+  lengthInput.value = def.length;
+  weightInput.value = def.weight;
+  updateAll();
+}
+
+// Автоматичний перерахунок при зміні будь-якого параметру
+function updateAll(){
+  const def = defaults[weaveSelect.value];
+  let wire = sanitize(parseFloat(wireInput.value));
+  let bar = sanitize(parseFloat(barInput.value));
+  let length = sanitize(parseFloat(lengthInput.value));
+  let weight = sanitize(parseFloat(weightInput.value));
+  const loss = lossCheckbox.checked;
+  const coef = def.weight / (def.length * (def.wire + def.bar));
+
+  if(!isNaN(wire) && !isNaN(bar) && !isNaN(length)){
+    weight = length * (wire + bar) * coef;
+  } else if(!isNaN(weight) && !isNaN(wire) && !isNaN(bar)){
+    length = weight / ((wire + bar) * coef);
+  } else if(!isNaN(weight) && !isNaN(length) && !isNaN(bar)){
+    wire = (weight / (length * coef)) - bar;
+  } else if(!isNaN(weight) && !isNaN(length) && !isNaN(wire)){
+    bar = (weight / (length * coef)) - wire;
+  }
+
+  if(!isNaN(weight) && loss) weight *=1.08;
+
+  wireInput.value = !isNaN(wire) ? wire.toFixed(2) : '';
+  barInput.value = !isNaN(bar) ? bar.toFixed(2) : '';
+  lengthInput.value = !isNaN(length) ? length.toFixed(2) : '';
+  weightInput.value = !isNaN(weight) ? weight.toFixed(2) : '';
+
+  outputDiv.innerHTML = `
+    Плетіння: ${weaveSelect.value}<br>
+    Проволока: ${wireInput.value || 'н/д'} мм<br>
+    Ригель: ${barInput.value || 'н/д'} мм<br>
+    Довжина: ${lengthInput.value || 'н/д'} см<br>
+    Вага: ${weightInput.value || 'н/д'} г
+  `;
+}
+
+// Повний розрахунок при натисканні кнопки
+function calculate(){
+  const def = defaults[weaveSelect.value];
+  let wire = sanitize(parseFloat(wireInput.value));
+  let bar = sanitize(parseFloat(barInput.value));
+  let length = sanitize(parseFloat(lengthInput.value));
+  let weight = sanitize(parseFloat(weightInput.value));
+  const loss = lossCheckbox.checked;
+  const coef = def.weight / (def.length * (def.wire + def.bar));
+
+  if(isNaN(weight) && !isNaN(wire) && !isNaN(bar) && !isNaN(length)){
+    weight = length * (wire + bar) * coef;
+  }
+  if(isNaN(length) && !isNaN(wire) && !isNaN(bar) && !isNaN(weight)){
+    length = weight / ((wire + bar) * coef);
+  }
+  if(isNaN(wire) && !isNaN(bar) && !isNaN(length) && !isNaN(weight)){
+    wire = (weight / (length * coef)) - bar;
+  }
+  if(isNaN(bar) && !isNaN(wire) && !isNaN(length) && !isNaN(weight)){
+    bar = (weight / (length * coef)) - wire;
+  }
+
+  if(!isNaN(weight) && loss) weight *=1.08;
+
+  wireInput.value = !isNaN(wire) ? wire.toFixed(2) : '';
+  barInput.value = !isNaN(bar) ? bar.toFixed(2) : '';
+  lengthInput.value = !isNaN(length) ? length.toFixed(2) : '';
+  weightInput.value = !isNaN(weight) ? weight.toFixed(2) : '';
+
+  outputDiv.innerHTML = `
+    Плетіння: ${weaveSelect.value}<br>
+    Проволока: ${wireInput.value || 'н/д'} мм<br>
+    Ригель: ${barInput.value || 'н/д'} мм<br>
+    Довжина: ${lengthInput.value || 'н/д'} см<br>
+    Вага: ${weightInput.value || 'н/д'} г
+  `;
+}
+
+// Події
+[wireInput, barInput, lengthInput, weightInput, lossCheckbox].forEach(el=>{
+  el.addEventListener('input', updateAll);
+});
+weaveSelect.addEventListener('change', setDefaults);
+calculateBtn.addEventListener('click', calculate);
+
+setDefaults();
+</script>
+</body>
+</html>
